@@ -2,7 +2,7 @@
 
 If your materialized views take a while to refresh, you'll probably want to refresh them regularly when the database load
 is low, say every night at 3 am. Running a `REFRESH` on every materialized view every 24 hours works fine as long as all your
-materialized view obtain their data only from tables. Things become slightly more complicated once they obtain their input from othermaterialized views: Say materialized view `B` obtains its input from materialized view `A`, and
+materialized view obtain their data only from tables. Things become slightly more complicated once they obtain their input from other materialized views: Say materialized view `B` obtains its input from materialized view `A`, and
 you run a cron job each night at 3 am which refreshes all materialized views in arbitrary order. If `B` is refreshed before `A`,
 the data in `B` will be at least 24 hours old immediately *after* the cron job has finished.
 
