@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+
+import re
+import sys
+import os
+import psycopg2
+
+GET_MAT_VIEWS_QUERY = """
+select
+    relname
+from
+    pg_class pgc
+inner join pg_namespace ns on
+    pgc.relnamespace = ns.oid
+where
+    pgc.relkind = 'm'
+    and ns.nspname = %s
+"""
+
+GET_MAT_VIEWS_DEPENDENCIES_QUERY = """
+select
+	dependent_mat_view.relname as dependent_mat_view,
+	source_table.relname as source_mat_view
+from
+	pg_depend
+inner join pg_rewrite on
+	pg_depend.objid = pg_rewrite.oid
+inner join pg_class as dependent_mat_view on
+	pg_rewrite.ev_class = dependent_mat_view.oid
+inner join pg_class as source_table on
+	pg_depend.refobjid = source_table.oid
+inner join pg_attribute on
+	pg_depend.refobjid = pg_attribute.attrelid
+	and pg_depend.refobjsubid = pg_attribute.attnum
+inner join pg_namespace source_ns on
+	source_ns.oid = source_table.relnamespace
+where
+	source_ns.nspname = %s
+	and dependent_mat_view.relkind = 'm'
+	and source_table.relkind = 'm'
+	and pg_attribute.attnum > 0
+group by
+	dependent_mat_view,
+	source_mat_view
+order by
+	dependent_mat_view,
+	source_mat_view
+"""
+
+
+def main(schema, pg_user, pg_database):
+    with psycopg2.connect("dbname={} user={}".format(pg_database, pg_user)) as conn:
+
+        cur = conn.cursor()
+        cur.execute(GET_MAT_VIEWS_QUERY, (schema,))
+
+        all_nodes = []
+        graph = {}
+        for mat_view, in cur.fetchall():
+            all_nodes.append(mat_view)
+            graph[mat_view] = []    # no incoming edges initially
+
+        cur.execute(GET_MAT_VIEWS_DEPENDENCIES_QUERY, (schema,))
+        for dependent_mat_view, source_mat_view in cur.fetchall():
+            graph[dependent_mat_view].append(source_mat_view)
+
+        for mat_view in kahn_topological_sort(graph, all_nodes):
+            query = 'REFRESH MATERIALIZED VIEW CONCURRENTLY ' + schema + '.' + mat_view
+            print(query)
+            try:
+                cur.execute(query)
+                conn.commit()
+            except psycopg2.OperationalError as e:
+                if e.pgcode == '55000' and 'concurrently' in e.pgerror:
+                    conn.rollback()
+                    query = 'REFRESH MATERIALIZED VIEW ' + schema + '.' + mat_view
+                    print(e.pgerror)
+                    print("Attempt to refresh view non-concurrently")
+                    print(query)
+                    cur.execute(query)
+                    conn.commit()
+                else:
+                    print(str(e.pgcode))
+                    raise e
+
+
+def kahn_topological_sort(graph, all_nodes):
+
+    topological_sort_order = []
+    nodes = [n for n in all_nodes if not graph[n]]
+
+    while nodes:
+        n, nodes = nodes[0], nodes[1:]
+        topological_sort_order.append(n)
+        reachable_from_n = [v for v in all_nodes if n in graph[v]]
+        for v in reachable_from_n:
+            graph[v].remove(n)
+            if not graph[v]:
+                nodes.append(v)
+
+    assert not any(graph[v] for v in all_nodes)
+
+    return topological_sort_order
+
+
+if __name__ == "__main__":
+    main(sys.argv[1], os.environ['PGUSER'], os.environ['PGDATABASE'])
