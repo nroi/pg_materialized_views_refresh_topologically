@@ -10,5 +10,10 @@ This python script solves this problem by representing the materialized views in
 edge on `B` from `A` means that materialized view `B` receives input from materialized view `A`. This graph is then topologically
 sorted in order to execute all `REFRESH MATERIALIZED VIEW` statements in correct order.
 
-## Concurrent Refresh
+### Usage
+To refresh all materialized views inside a given database schema, run:
+
+    ./pg_materialized_views_refresh_topologically <schema>
+
+### Concurrent Refresh
 This script will first attempt to refresh the materialized view [concurrently](https://www.postgresql.org/docs/10/static/sql-refreshmaterializedview.html). If that fails, it does an ordinary refresh.
