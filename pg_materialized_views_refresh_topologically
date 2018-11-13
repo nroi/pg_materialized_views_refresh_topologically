@@ -61,11 +61,14 @@ def main(schema, pg_user, pg_database):
 
         cur.execute(GET_MAT_VIEWS_DEPENDENCIES_QUERY, (schema,))
         for dependent_mat_view, source_mat_view in cur.fetchall():
-            graph[dependent_mat_view].append(source_mat_view)
+            # All materialized views which obtain data from the given schema, but are not stored in
+            # the given schema, are NOT updated.
+            if dependent_mat_view in graph:
+                graph[dependent_mat_view].append(source_mat_view)
 
         for mat_view in kahn_topological_sort(graph, all_nodes):
             query = 'REFRESH MATERIALIZED VIEW CONCURRENTLY ' + schema + '.' + mat_view
-            print(query)
+            print(query, flush=True)
             try:
                 cur.execute(query)
                 conn.commit()
