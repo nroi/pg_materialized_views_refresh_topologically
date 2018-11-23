@@ -15,5 +15,10 @@ To refresh all materialized views inside a given database schema, run:
 
     ./pg_materialized_views_refresh_topologically <schema>
 
+Connection parameters (host, port etc.) are set with [environment variables](https://www.postgresql.org/docs/10/libpq-envars.html). The password has to be set in the [password file](https://www.postgresql.org/docs/10/libpq-pgpass.html).
+
 ### Concurrent Refresh
-This script will first attempt to refresh the materialized view [concurrently](https://www.postgresql.org/docs/10/static/sql-refreshmaterializedview.html). If that fails, it does an ordinary refresh.
+This script will first attempt to refresh the materialized view [concurrently](https://www.postgresql.org/docs/10/static/sql-refreshmaterializedview.html). If that fails, it does an ordinary refresh. This means you don't need to worry about error messages in the form of:
+```
+ERROR:  cannot refresh materialized view "my_schema.my_view" concurrently
+```
