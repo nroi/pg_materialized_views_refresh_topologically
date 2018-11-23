@@ -1,10 +1,10 @@
 # pg_materialized_views_refresh_topologically
 
-If your materialized views take a while to refresh, you'll probably want to refresh them regularly when the database load
-is low, say every night at 3 am. Running a `REFRESH` on every materialized view every 24 hours works fine as long as all your
-materialized view obtain their data only from tables. Things become slightly more complicated once they obtain their input from other materialized views: Say materialized view `B` obtains its input from materialized view `A`, and
-you run a cron job each night at 3 am which refreshes all materialized views in arbitrary order. If `B` is refreshed before `A`,
-the data in `B` will be at least 24 hours old immediately *after* the cron job has finished.
+If your materialized views take a while to refresh, you'll probably want to refresh them regularly at a time when the database load
+is low, say every night at 3 a.m. Running a `REFRESH` on every materialized view every 24 hours works fine as long as all your
+materialized views obtain their data only from tables. Things become slightly more complicated once they obtain their data from other materialized views: Suppose materialized view `B` obtains its input from materialized view `A`, and
+you run a cron job every night at 3 a.m. which refreshes all materialized views in arbitrary order. If `B` is refreshed before `A`,
+the data in `B` will still be 24 hours old immediately *after* the cron job has finished.
 
 This python script solves this problem by representing the materialized views in a directed acyclic graph (DAG), where an incoming
 edge on `B` from `A` means that materialized view `B` receives input from materialized view `A`. This graph is then topologically
