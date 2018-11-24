@@ -17,32 +17,32 @@ where
 
 GET_MAT_VIEWS_DEPENDENCIES_QUERY = """
 select
-	dependent_mat_view.relname as dependent_mat_view,
-	source_table.relname as source_mat_view
+    dependent_mat_view.relname as dependent_mat_view,
+    source_table.relname as source_mat_view
 from
-	pg_depend
+    pg_depend
 inner join pg_rewrite on
-	pg_depend.objid = pg_rewrite.oid
+    pg_depend.objid = pg_rewrite.oid
 inner join pg_class as dependent_mat_view on
-	pg_rewrite.ev_class = dependent_mat_view.oid
+    pg_rewrite.ev_class = dependent_mat_view.oid
 inner join pg_class as source_table on
-	pg_depend.refobjid = source_table.oid
+    pg_depend.refobjid = source_table.oid
 inner join pg_attribute on
-	pg_depend.refobjid = pg_attribute.attrelid
-	and pg_depend.refobjsubid = pg_attribute.attnum
+    pg_depend.refobjid = pg_attribute.attrelid
+    and pg_depend.refobjsubid = pg_attribute.attnum
 inner join pg_namespace source_ns on
-	source_ns.oid = source_table.relnamespace
+    source_ns.oid = source_table.relnamespace
 where
-	source_ns.nspname = %s
-	and dependent_mat_view.relkind = 'm'
-	and source_table.relkind = 'm'
-	and pg_attribute.attnum > 0
+    source_ns.nspname = %s
+    and dependent_mat_view.relkind = 'm'
+    and source_table.relkind = 'm'
+    and pg_attribute.attnum > 0
 group by
-	dependent_mat_view,
-	source_mat_view
+    dependent_mat_view,
+    source_mat_view
 order by
-	dependent_mat_view,
-	source_mat_view
+    dependent_mat_view,
+    source_mat_view
 """
 
 
