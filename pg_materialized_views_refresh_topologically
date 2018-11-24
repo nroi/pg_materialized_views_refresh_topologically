@@ -82,7 +82,6 @@ def main(schema):
                     cur.execute(query)
                     conn.commit()
                 else:
-                    print(str(e.pgcode))
                     raise e
 
 
