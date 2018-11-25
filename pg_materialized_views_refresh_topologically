@@ -2,6 +2,7 @@
 
 import sys
 import psycopg2
+import argparse
 
 GET_MAT_VIEWS_QUERY = """
 select
@@ -46,7 +47,7 @@ order by
 """
 
 
-def main(schema):
+def main(schema, dry_run):
 
     with psycopg2.connect(dsn="") as conn:
 
@@ -69,20 +70,21 @@ def main(schema):
         for mat_view in kahn_topological_sort(graph, all_nodes):
             query = 'REFRESH MATERIALIZED VIEW CONCURRENTLY ' + schema + '.' + mat_view
             print(query, flush=True)
-            try:
-                cur.execute(query)
-                conn.commit()
-            except psycopg2.OperationalError as e:
-                if e.pgcode == '55000' and 'concurrently' in e.pgerror:
-                    conn.rollback()
-                    query = 'REFRESH MATERIALIZED VIEW ' + schema + '.' + mat_view
-                    print(e.pgerror)
-                    print("Attempt to refresh view non-concurrently")
-                    print(query)
+            if not dry_run:
+                try:
                     cur.execute(query)
                     conn.commit()
-                else:
-                    raise e
+                except psycopg2.OperationalError as e:
+                    if e.pgcode == '55000' and 'concurrently' in e.pgerror:
+                        conn.rollback()
+                        query = 'REFRESH MATERIALIZED VIEW ' + schema + '.' + mat_view
+                        print(e.pgerror)
+                        print("Attempt to refresh view non-concurrently")
+                        print(query)
+                        cur.execute(query)
+                        conn.commit()
+                    else:
+                        raise e
 
 
 def kahn_topological_sort(graph, all_nodes):
@@ -105,4 +107,9 @@ def kahn_topological_sort(graph, all_nodes):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    parser = argparse.ArgumentParser(description='Refresh materialized views in topological order')
+    parser.add_argument('--schema', help='refresh all materialized views in this schema')
+    parser.add_argument('--dry-run', action='store_true', help='perform a trial run with no SQL statements executed')
+    args = parser.parse_args()
+    schema = args.schema or 'public'
+    main(schema=schema, dry_run=args.dry_run)
