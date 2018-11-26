@@ -11,9 +11,15 @@ edge on `B` from `A` means that materialized view `B` receives input from materi
 sorted in order to execute all `REFRESH MATERIALIZED VIEW` statements in correct order.
 
 ### Usage
+To refresh all materialized views inside a given database, run:
+
+    ./pg_materialized_views_refresh_topologically
+
 To refresh all materialized views inside a given database schema, run:
 
-    ./pg_materialized_views_refresh_topologically <schema>
+    ./pg_materialized_views_refresh_topologically --schema <schema>
+
+See `./pg_materialized_views_refresh_topologically -h` for more details.
 
 Connection parameters (host, port etc.) are set with [environment variables](https://www.postgresql.org/docs/10/libpq-envars.html). The password has to be set in the [password file](https://www.postgresql.org/docs/10/libpq-pgpass.html).
 
