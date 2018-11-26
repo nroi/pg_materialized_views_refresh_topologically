@@ -66,6 +66,14 @@ def main():
     include_pattern = args.include
     exclude_pattern = args.exclude
 
+    def should_refresh(schema, mat_view):
+        # All materialized views which obtain data from the given schema, but are not stored in
+        # the given schema, are NOT updated.
+        is_member_of_schema = included_schema is None or schema == included_schema
+        is_included = include_pattern is None or re.match(include_pattern, mat_view)
+        is_excluded = exclude_pattern is not None and re.match(exclude_pattern, mat_view)
+        return is_member_of_schema and is_included and not is_excluded
+
     with psycopg2.connect(dsn="") as conn:
 
         cur = conn.cursor()
@@ -76,14 +84,6 @@ def main():
         for schema, mat_view, in cur.fetchall():
             all_nodes.append((schema, mat_view))
             graph[(schema, mat_view)] = []    # no incoming edges initially
-
-        def should_refresh(schema, mat_view):
-            # All materialized views which obtain data from the given schema, but are not stored in
-            # the given schema, are NOT updated.
-            is_member_of_schema = included_schema is None or schema == included_schema
-            is_included = include_pattern is None or re.match(include_pattern, mat_view)
-            is_excluded = exclude_pattern is not None and re.match(exclude_pattern, mat_view)
-            return is_member_of_schema and is_included and not is_excluded
 
         cur.execute(GET_MAT_VIEWS_DEPENDENCIES_QUERY)
         for source_schema, source_mat_view, dependent_schema, dependent_mat_view in cur.fetchall():
