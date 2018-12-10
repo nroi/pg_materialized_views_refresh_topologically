@@ -101,9 +101,8 @@ def main():
                     if e.pgcode == '55000' and 'concurrently' in e.pgerror:
                         conn.rollback()
                         query = 'REFRESH MATERIALIZED VIEW ' + schema + '.' + mat_view
-                        print(e.pgerror)
                         print("Attempt to refresh view non-concurrently")
-                        print(query)
+                        print(query, flush=True)
                         cur.execute(query)
                         conn.commit()
                     else:
