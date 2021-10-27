@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import argparse
 import re
 import psycopg2
@@ -97,8 +95,8 @@ def main():
                 try:
                     cur.execute(query)
                     conn.commit()
-                except psycopg2.OperationalError as e:
-                    if e.pgcode == '55000' and 'concurrently' in e.pgerror:
+                except (psycopg2.NotSupportedError, psycopg2.OperationalError) as e:
+                    if e.pgcode in ('0A000', '55000') and 'concurrently' in e.pgerror.lower():
                         conn.rollback()
                         query = 'REFRESH MATERIALIZED VIEW ' + schema + '.' + mat_view
                         print("Attempt to refresh view non-concurrently")
@@ -107,7 +105,6 @@ def main():
                         conn.commit()
                     else:
                         raise e
-
 
 def kahn_topological_sort(graph, all_nodes):
 
